@@ -12,11 +12,29 @@ import (
 func CreateTransactionHandler(c *fiber.Ctx) error {
 	var transaction models.Transaction
 
+	userID := c.Locals("user_id")
+	if userID == nil {
+		log.Println("UserID is missing in context")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "UserID is missing in context",
+		})
+	}
+
+	intUserID, ok := userID.(int)
+	if !ok || intUserID == 0 {
+		log.Printf("Invalid UserID from context: %v\n", userID)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid UserID format",
+		})
+	}
+
 	if err := c.BodyParser(&transaction); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid transaction data",
 		})
 	}
+
+	transaction.UserID = intUserID
 
 	if transaction.Amount <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -31,6 +49,7 @@ func CreateTransactionHandler(c *fiber.Ctx) error {
 
 	newTransaction, err := module.CreateTransaction(transaction.UserID, transaction.Amount, transaction.Category, transaction.Description)
 	if err != nil {
+		log.Printf("Error creating transaction: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create transaction",
 		})
