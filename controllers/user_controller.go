@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/Sc01100100/SaveCash-API/module"
+	"github.com/Sc01100100/SaveCash-API/models"
 	"github.com/Sc01100100/SaveCash-API/config"
 	"github.com/Sc01100100/SaveCash-API/utils"
 	"github.com/gofiber/fiber/v2"
@@ -148,5 +149,41 @@ func LogoutUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  "success",
 		"message": "Logout successful",
+	})
+}
+
+func GetUserInfo(c *fiber.Ctx) error {
+	userID := c.Locals("user_id")
+	if userID == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "UserID is missing in context",
+		})
+	}
+
+	intUserID, ok := userID.(int)
+	if !ok || intUserID == 0 {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid UserID format",
+		})
+	}
+
+	var user models.User
+	query := `SELECT name, balance FROM users WHERE id = $1`
+	err := config.Database.QueryRow(query, intUserID).Scan(&user.Name, &user.Balance)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to retrieve user information",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"data": fiber.Map{
+			"name":    user.Name,
+			"balance": user.Balance,
+		},
 	})
 }
