@@ -2,8 +2,8 @@ package module
 
 import (
 	"fmt"
-	"time"
 	"log"
+	"time"
 
 	"github.com/Sc01100100/SaveCash-API/config"
 	"github.com/Sc01100100/SaveCash-API/models"
@@ -16,7 +16,7 @@ func CreateTransaction(userID int, amount float64, category, description string)
 	if err != nil {
 		return models.Transaction{}, fmt.Errorf("failed to fetch total income: %w", err)
 	}
-	log.Printf("Total Income for UserID %d: %.2f\n", userID, totalIncome) // Log total income
+	log.Printf("Total Income for UserID %d: %.2f\n", userID, totalIncome) 
 
 	queryExpense := `SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = $1`
 	var totalExpense float64
@@ -24,7 +24,7 @@ func CreateTransaction(userID int, amount float64, category, description string)
 	if err != nil {
 		return models.Transaction{}, fmt.Errorf("failed to fetch total expenses: %w", err)
 	}
-	log.Printf("Total Expenses for UserID %d: %.2f\n", userID, totalExpense) // Log total expenses
+	log.Printf("Total Expenses for UserID %d: %.2f\n", userID, totalExpense) 
 
 	availableBalance := totalIncome - totalExpense
 	if amount > availableBalance {
@@ -42,6 +42,11 @@ func CreateTransaction(userID int, amount float64, category, description string)
 	)
 	if err != nil {
 		return models.Transaction{}, fmt.Errorf("failed to create transaction: %w", err)
+	}
+
+	_, err = config.Database.Exec(`UPDATE users SET balance = balance - $1 WHERE id = $2`, amount, userID)
+	if err != nil {
+		return models.Transaction{}, fmt.Errorf("failed to update user balance after transaction: %w", err)
 	}
 
 	return transaction, nil
@@ -78,21 +83,39 @@ func CreateIncome(userID int, amount float64, source string) (models.Income, err
 	var income models.Income
 	err = config.Database.QueryRow(query, userID, amount, source, time.Now()).Scan(&income.ID, &income.UserID, &income.Amount, &income.Source, &income.CreatedAt)
 	if err != nil {
-		log.Printf("Error creating income: %v\n", err) 
-		return income, err 
+		log.Printf("Error creating income: %v\n", err)
+		return income, err
 	}
 
-	log.Printf("Income created successfully: ID: %d, UserID: %d, Amount: %.2f, Source: %s, CreatedAt: %s\n", 
+	log.Printf("Income created successfully: ID: %d, UserID: %d, Amount: %.2f, Source: %s, CreatedAt: %s\n",
 		income.ID, income.UserID, income.Amount, income.Source, income.CreatedAt)
+
+	_, err = config.Database.Exec(`UPDATE users SET balance = balance + $1 WHERE id = $2`, amount, userID)
+	if err != nil {
+		log.Printf("Error updating user balance: %v\n", err)
+		return models.Income{}, fmt.Errorf("failed to update user balance")
+	}
 
 	return income, nil
 }
 
 func DeleteIncome(incomeID int) error {
+	var amount float64
+	err := config.Database.QueryRow(`SELECT amount FROM incomes WHERE id = $1`, incomeID).Scan(&amount)
+	if err != nil {
+		return fmt.Errorf("failed to fetch income amount: %w", err)
+	}
+
 	query := `DELETE FROM incomes WHERE id = $1`
-	_, err := config.Database.Exec(query, incomeID)
+	_, err = config.Database.Exec(query, incomeID)
 	if err != nil {
 		return fmt.Errorf("failed to delete income: %w", err)
 	}
+
+	_, err = config.Database.Exec(`UPDATE users SET balance = balance - $1 WHERE id = (SELECT user_id FROM incomes WHERE id = $2)`, amount, incomeID)
+	if err != nil {
+		return fmt.Errorf("failed to update user balance after deleting income: %w", err)
+	}
+
 	return nil
 }
