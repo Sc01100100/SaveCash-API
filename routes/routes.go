@@ -21,6 +21,8 @@ func SetupRoutes(app *fiber.App) {
 	protected.Post("/incomes", controllers.CreateIncomeHandler)
 	protected.Delete("/incomes/:id", controllers.DeleteIncomeHandler)
 
+	protected.Get("/user/info", controllers.GetUserInfo)
+
 	admin := protected.Group("/admin") 
 	admin.Use(middlewares.AdminMiddleware()) 
 	admin.Get("/users", controllers.GetAllUser) 
