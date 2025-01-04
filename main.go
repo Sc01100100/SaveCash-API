@@ -11,21 +11,21 @@ import (
 )
 
 func main() {
-	if os.Getenv("HEROKU") == "" {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatalf("Error loading .env file: %v", err)
-		}
-	}
+    if os.Getenv("HEROKU") != "true" {
+        err := godotenv.Load()
+        if err != nil {
+            log.Fatalf("Error loading .env file: %v", err)
+        }
+    }
 
-	config.ConnectDB()
-	defer config.Database.Close()
+    config.ConnectDB()
+    defer config.Database.Close()
 
-	log.Println("Database connection established.")
+    log.Println("Database connection established.")
 
-	app := fiber.New()
+    app := fiber.New()
 
-	routes.SetupRoutes(app)
+    routes.SetupRoutes(app)
 
-	log.Fatal(app.Listen(":8080"))
+    log.Fatal(app.Listen(":8080"))
 }
