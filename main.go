@@ -1,54 +1,43 @@
-package main
+package config
 
 import (
-    "log"
+	"database/sql"
+	"fmt"
+	"log"
+	"os"
 
-    "github.com/gofiber/fiber/v2"
-    "github.com/Sc01100100/SaveCash-API/config"
-    "github.com/Sc01100100/SaveCash-API/routes"
+	_ "github.com/lib/pq" 
+	"github.com/joho/godotenv"
 )
 
-func main() {
-    config.ConnectDB()
-    defer config.Database.Close()
+var Database *sql.DB
 
-    log.Println("Database connection established.")
+func ConnectDB() *sql.DB {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
 
-    app := fiber.New()
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+	sslmode := os.Getenv("DB_SSLMODE")
 
-    routes.SetupRoutes(app)
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		host, port, user, password, dbname, sslmode)
 
-    log.Fatal(app.Listen(":8080"))
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("Cannot ping database: %v", err)
+	}
+
+	log.Println("Connected to the database successfully!")
+	Database = db 
+	return db
 }
-
-
-
-
-
-// package main
-
-// import (
-// 	"log"
-// 	"github.com/joho/godotenv"
-// 	"github.com/gofiber/fiber/v2"
-// 	"github.com/Sc01100100/SaveCash-API/config"
-// 	"github.com/Sc01100100/SaveCash-API/routes"
-// )
-
-// func main() {
-// 	err := godotenv.Load()
-// 	if err != nil {
-// 		log.Fatalf("Error loading .env file: %v", err)
-// 	}
-
-// 	config.ConnectDB()
-// 	defer config.Database.Close()
-
-// 	log.Println("Database connection established.")
-
-// 	app := fiber.New()
-
-// 	routes.SetupRoutes(app)
-
-// 	log.Fatal(app.Listen(":8080"))
-// }
