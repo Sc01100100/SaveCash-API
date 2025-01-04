@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 	"log"
+	"regexp"
 
 	"github.com/Sc01100100/SaveCash-API/module"
 	"github.com/Sc01100100/SaveCash-API/models"
@@ -30,6 +31,35 @@ func GetAllUser(c *fiber.Ctx) error {
 	})
 }
 
+func isValidEmail(email string) bool {
+	var emailRegex = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	re := regexp.MustCompile(emailRegex)
+	return re.MatchString(email)
+}
+
+func isValidPassword(password string) bool {
+	if len(password) < 8 {
+		return false
+	}
+
+	hasUpper := false
+	hasNumber := false
+	hasSpecial := false
+
+	for _, char := range password {
+		switch {
+		case 'A' <= char && char <= 'Z':
+			hasUpper = true
+		case '0' <= char && char <= '9':
+			hasNumber = true
+		case char == '!' || char == '@' || char == '#' || char == '$' || char == '%' || char == '^' || char == '&' || char == '*' || char == '(' || char == ')' || char == '_' || char == '+' || char == '-' || char == '=' || char == '{' || char == '}' || char == '[' || char == ']' || char == ':' || char == ';' || char == '"' || char == '\'' || char == '<' || char == '>' || char == ',' || char == '.' || char == '?' || char == '/' || char == '~':
+			hasSpecial = true
+		}
+	}
+
+	return hasUpper && hasNumber && hasSpecial
+}
+
 func InsertUser(c *fiber.Ctx) error {
 	type RequestBody struct {
 		Name     string `json:"name"`
@@ -52,6 +82,22 @@ func InsertUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "All fields (name, email, password) are required",
+			"data":    nil,
+		})
+	}
+
+	if !isValidEmail(body.Email) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid email format.",
+			"data":    nil,
+		})
+	}
+
+	if !isValidPassword(body.Password) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Password must be at least 8 characters, with an uppercase letter, number, and special character.",
 			"data":    nil,
 		})
 	}
