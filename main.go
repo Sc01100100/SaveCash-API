@@ -2,9 +2,10 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/Sc01100100/SaveCash-API/config"
-	"github.com/Sc01100100/SaveCash-API/middlewares" 
+	"github.com/Sc01100100/SaveCash-API/middlewares"
 	"github.com/Sc01100100/SaveCash-API/routes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -19,8 +20,12 @@ func main() {
     app := fiber.New()
 
     app.Use(cors.New(middlewares.Cors))
-
+   
     routes.SetupRoutes(app)
-
-    log.Fatal(app.Listen(":8080"))
+   
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080" 
+    }
+    log.Fatal(app.Listen(":" + port))
 }
