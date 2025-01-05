@@ -1,43 +1,27 @@
-package config
+package main
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
-	"os"
-
-	_ "github.com/lib/pq" 
 	"github.com/joho/godotenv"
+	"github.com/gofiber/fiber/v2"
+	"github.com/Sc01100100/SaveCash-API/config"
+	"github.com/Sc01100100/SaveCash-API/routes"
 )
 
-var Database *sql.DB
-
-func ConnectDB() *sql.DB {
+func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-	sslmode := os.Getenv("DB_SSLMODE")
+	config.ConnectDB()
+	defer config.Database.Close()
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, password, dbname, sslmode)
+	log.Println("Database connection established.")
 
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+	app := fiber.New()
 
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Cannot ping database: %v", err)
-	}
+	routes.SetupRoutes(app)
 
-	log.Println("Connected to the database successfully!")
-	Database = db 
-	return db
+	log.Fatal(app.Listen(":8080"))
 }
