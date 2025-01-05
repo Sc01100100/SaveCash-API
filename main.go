@@ -5,26 +5,22 @@ import (
     "os"
 
     "github.com/gofiber/fiber/v2"
-    "github.com/Sc01100100/SaveCash-API/config"
-    "github.com/Sc01100100/SaveCash-API/routes"
-    "github.com/joho/godotenv"
 )
 
 func main() {
-    if os.Getenv("APP_ENV") != "production" {
-        if err := godotenv.Load(); err != nil {
-            log.Println("Error loading .env file:", err)
-        }
-    }
-
-    config.ConnectDB()
-    defer config.Database.Close()
-
-    log.Println("Database connection established.")
-
     app := fiber.New()
 
-    routes.SetupRoutes(app)
+    app.Get("/", func(c *fiber.Ctx) error {
+        return c.SendString("Hello, World!")
+    })
 
-    log.Fatal(app.Listen(":8080"))
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080" 
+    }
+
+    log.Printf("Starting server on port %s...\n", port)
+    if err := app.Listen(":" + port); err != nil {
+        log.Fatalf("Error starting server: %v", err)
+    }
 }
