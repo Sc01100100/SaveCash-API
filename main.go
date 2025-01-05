@@ -1,26 +1,26 @@
 package main
 
 import (
-    "log"
-    "os"
+	"log"
 
-    "github.com/gofiber/fiber/v2"
+	"github.com/Sc01100100/SaveCash-API/config"
+	"github.com/Sc01100100/SaveCash-API/middlewares" 
+	"github.com/Sc01100100/SaveCash-API/routes"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func main() {
+    config.ConnectDB()
+    defer config.Database.Close()
+
+    log.Println("Database connection established.")
+
     app := fiber.New()
 
-    app.Get("/", func(c *fiber.Ctx) error {
-        return c.SendString("Hello, World!")
-    })
+    app.Use(cors.New(middlewares.Cors))
 
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = "8080" 
-    }
+    routes.SetupRoutes(app)
 
-    log.Printf("Starting server on port %s...\n", port)
-    if err := app.Listen(":" + port); err != nil {
-        log.Fatalf("Error starting server: %v", err)
-    }
+    log.Fatal(app.Listen(":8080"))
 }
