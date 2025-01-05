@@ -1,27 +1,30 @@
 package main
 
 import (
-	"log"
-	"github.com/joho/godotenv"
-	"github.com/gofiber/fiber/v2"
-	"github.com/Sc01100100/SaveCash-API/config"
-	"github.com/Sc01100100/SaveCash-API/routes"
+    "log"
+    "os"
+
+    "github.com/gofiber/fiber/v2"
+    "github.com/Sc01100100/SaveCash-API/config"
+    "github.com/Sc01100100/SaveCash-API/routes"
+    "github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
+    if os.Getenv("APP_ENV") != "production" {
+        if err := godotenv.Load(); err != nil {
+            log.Println("Error loading .env file:", err)
+        }
+    }
 
-	config.ConnectDB()
-	defer config.Database.Close()
+    config.ConnectDB()
+    defer config.Database.Close()
 
-	log.Println("Database connection established.")
+    log.Println("Database connection established.")
 
-	app := fiber.New()
+    app := fiber.New()
 
-	routes.SetupRoutes(app)
+    routes.SetupRoutes(app)
 
-	log.Fatal(app.Listen(":8080"))
+    log.Fatal(app.Listen(":8080"))
 }
