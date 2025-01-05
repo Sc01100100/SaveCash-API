@@ -14,7 +14,7 @@ var origins = []string{
 
 var Cors = cors.Config{
     AllowOrigins:     strings.Join(origins[:], ","),
-    AllowHeaders:     "Origin, Content-Type, Accept",
+    AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
     ExposeHeaders:    "Content-Length",
     AllowCredentials: true,
 }
