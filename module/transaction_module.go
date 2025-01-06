@@ -120,22 +120,42 @@ func DeleteIncome(incomeID int) error {
 	return nil
 }
 
-func GetIncomeByID(incomeID, userID int) (models.Income, error) {
-	var income models.Income
-	query := `SELECT id, user_id, amount, source, created_at FROM incomes WHERE id = $1 AND user_id = $2`
-	err := config.Database.QueryRow(query, incomeID, userID).Scan(&income.ID, &income.UserID, &income.Amount, &income.Source, &income.CreatedAt)
+func GetTransactions(userID int) ([]models.Transaction, error) {
+	query := `SELECT id, user_id, amount, category, description, created_at FROM transactions WHERE user_id = $1`
+	rows, err := config.Database.Query(query, userID)
 	if err != nil {
-		return models.Income{}, fmt.Errorf("income not found")
+		return nil, fmt.Errorf("failed to fetch transactions: %w", err)
 	}
-	return income, nil
+	defer rows.Close()
+
+	var transactions []models.Transaction
+	for rows.Next() {
+		var transaction models.Transaction
+		if err := rows.Scan(&transaction.ID, &transaction.UserID, &transaction.Amount, &transaction.Category, &transaction.Description, &transaction.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		transactions = append(transactions, transaction)
+	}
+
+	return transactions, nil
 }
 
-func GetTransactionByID(transactionID, userID int) (models.Transaction, error) {
-	var transaction models.Transaction
-	query := `SELECT id, user_id, amount, category, description, created_at FROM transactions WHERE id = $1 AND user_id = $2`
-	err := config.Database.QueryRow(query, transactionID, userID).Scan(&transaction.ID, &transaction.UserID, &transaction.Amount, &transaction.Category, &transaction.Description, &transaction.CreatedAt)
+func GetIncomes(userID int) ([]models.Income, error) {
+	query := `SELECT id, user_id, amount, source, created_at FROM incomes WHERE user_id = $1`
+	rows, err := config.Database.Query(query, userID)
 	if err != nil {
-		return models.Transaction{}, fmt.Errorf("transaction not found")
+		return nil, fmt.Errorf("failed to fetch incomes: %w", err)
 	}
-	return transaction, nil
+	defer rows.Close()
+
+	var incomes []models.Income
+	for rows.Next() {
+		var income models.Income
+		if err := rows.Scan(&income.ID, &income.UserID, &income.Amount, &income.Source, &income.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan income: %w", err)
+		}
+		incomes = append(incomes, income)
+	}
+
+	return incomes, nil
 }

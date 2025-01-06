@@ -16,11 +16,11 @@ func SetupRoutes(app *fiber.App) {
 	protected := api.Group("/", middlewares.AuthMiddleware())
 
 	protected.Post("/transactions", controllers.CreateTransactionHandler)
-	protected.Get("/transactions/:transactionID", controllers.GetTransactionByID)
+	protected.Get("/transactions", controllers.GetTransactionsHandler)
 	protected.Delete("/transactions/:id", controllers.DeleteTransactionHandler)
 
 	protected.Post("/incomes", controllers.CreateIncomeHandler)
-	protected.Get("/incomes/:incomeID", controllers.GetIncomeByID)
+	protected.Get("/incomes", controllers.GetIncomesHandler)
 	protected.Delete("/incomes/:id", controllers.DeleteIncomeHandler)
 
 	protected.Get("/user/info", controllers.GetUserInfo)

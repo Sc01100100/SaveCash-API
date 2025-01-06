@@ -155,16 +155,10 @@ func DeleteIncomeHandler(c *fiber.Ctx) error {
 	})
 }
 
-func GetTransactionByID(c *fiber.Ctx) error {
-	transactionID, err := strconv.Atoi(c.Params("transactionID"))
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid transaction ID",
-		})
-	}
-
+func GetTransactionsHandler(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	if userID == nil {
+		log.Println("UserID is missing in context")
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "UserID is missing in context",
 		})
@@ -172,34 +166,30 @@ func GetTransactionByID(c *fiber.Ctx) error {
 
 	intUserID, ok := userID.(int)
 	if !ok || intUserID == 0 {
+		log.Printf("Invalid UserID from context: %v\n", userID)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Invalid UserID format",
 		})
 	}
 
-	transaction, err := module.GetTransactionByID(transactionID, intUserID)
+	transactions, err := module.GetTransactions(intUserID)
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Transaction not found",
+		log.Printf("Error fetching transactions: %v\n", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch transactions",
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"status":      "success",
-		"transaction": transaction,
+		"transactions": transactions,
 	})
 }
 
-func GetIncomeByID(c *fiber.Ctx) error {
-	incomeID, err := strconv.Atoi(c.Params("incomeID"))
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid income ID",
-		})
-	}
-
+func GetIncomesHandler(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	if userID == nil {
+		log.Println("UserID is missing in context")
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "UserID is missing in context",
 		})
@@ -207,20 +197,22 @@ func GetIncomeByID(c *fiber.Ctx) error {
 
 	intUserID, ok := userID.(int)
 	if !ok || intUserID == 0 {
+		log.Printf("Invalid UserID from context: %v\n", userID)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Invalid UserID format",
 		})
 	}
 
-	income, err := module.GetIncomeByID(incomeID, intUserID)
+	incomes, err := module.GetIncomes(intUserID)
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Income not found",
+		log.Printf("Error fetching incomes: %v\n", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch incomes",
 		})
 	}
 
 	return c.JSON(fiber.Map{
-		"status": "success",
-		"income": income,
+		"status":  "success",
+		"incomes": incomes,
 	})
 }
