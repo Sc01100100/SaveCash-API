@@ -154,3 +154,73 @@ func DeleteIncomeHandler(c *fiber.Ctx) error {
 		"message": "Income deleted successfully",
 	})
 }
+
+func GetTransactionByID(c *fiber.Ctx) error {
+	transactionID, err := strconv.Atoi(c.Params("transactionID"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid transaction ID",
+		})
+	}
+
+	userID := c.Locals("user_id")
+	if userID == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "UserID is missing in context",
+		})
+	}
+
+	intUserID, ok := userID.(int)
+	if !ok || intUserID == 0 {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid UserID format",
+		})
+	}
+
+	transaction, err := module.GetTransactionByID(transactionID, intUserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Transaction not found",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status":      "success",
+		"transaction": transaction,
+	})
+}
+
+func GetIncomeByID(c *fiber.Ctx) error {
+	incomeID, err := strconv.Atoi(c.Params("incomeID"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid income ID",
+		})
+	}
+
+	userID := c.Locals("user_id")
+	if userID == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "UserID is missing in context",
+		})
+	}
+
+	intUserID, ok := userID.(int)
+	if !ok || intUserID == 0 {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid UserID format",
+		})
+	}
+
+	income, err := module.GetIncomeByID(incomeID, intUserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Income not found",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"income": income,
+	})
+}

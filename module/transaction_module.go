@@ -119,3 +119,23 @@ func DeleteIncome(incomeID int) error {
 
 	return nil
 }
+
+func GetIncomeByID(incomeID, userID int) (models.Income, error) {
+	var income models.Income
+	query := `SELECT id, user_id, amount, source, created_at FROM incomes WHERE id = $1 AND user_id = $2`
+	err := config.Database.QueryRow(query, incomeID, userID).Scan(&income.ID, &income.UserID, &income.Amount, &income.Source, &income.CreatedAt)
+	if err != nil {
+		return models.Income{}, fmt.Errorf("income not found")
+	}
+	return income, nil
+}
+
+func GetTransactionByID(transactionID, userID int) (models.Transaction, error) {
+	var transaction models.Transaction
+	query := `SELECT id, user_id, amount, category, description, created_at FROM transactions WHERE id = $1 AND user_id = $2`
+	err := config.Database.QueryRow(query, transactionID, userID).Scan(&transaction.ID, &transaction.UserID, &transaction.Amount, &transaction.Category, &transaction.Description, &transaction.CreatedAt)
+	if err != nil {
+		return models.Transaction{}, fmt.Errorf("transaction not found")
+	}
+	return transaction, nil
+}
