@@ -16,7 +16,7 @@ func CreateTransaction(userID int, amount float64, category, description string)
 	if err != nil {
 		return models.Transaction{}, fmt.Errorf("failed to fetch total income: %w", err)
 	}
-	log.Printf("Total Income for UserID %d: %.2f\n", userID, totalIncome) 
+	log.Printf("Total Income for UserID %d: %.2f\n", userID, totalIncome)
 
 	queryExpense := `SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = $1`
 	var totalExpense float64
@@ -24,9 +24,11 @@ func CreateTransaction(userID int, amount float64, category, description string)
 	if err != nil {
 		return models.Transaction{}, fmt.Errorf("failed to fetch total expenses: %w", err)
 	}
-	log.Printf("Total Expenses for UserID %d: %.2f\n", userID, totalExpense) 
+	log.Printf("Total Expenses for UserID %d: %.2f\n", userID, totalExpense)
 
 	availableBalance := totalIncome - totalExpense
+	log.Printf("Available Balance for UserID %d: %.2f\n", userID, availableBalance)
+
 	if amount > availableBalance {
 		return models.Transaction{}, fmt.Errorf("insufficient funds: available %.2f, required %.2f", availableBalance, amount)
 	}

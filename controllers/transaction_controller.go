@@ -1,8 +1,9 @@
 package controllers
 
 import (
-	"strconv"
+	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/Sc01100100/SaveCash-API/models"
 	"github.com/Sc01100100/SaveCash-API/module"
@@ -10,54 +11,54 @@ import (
 )
 
 func CreateTransactionHandler(c *fiber.Ctx) error {
-	var transaction models.Transaction
+	type RequestBody struct {
+		Amount      float64 `json:"amount"`
+		Category    string  `json:"category"`
+		Description string  `json:"description"`
+	}
+
+	var body RequestBody
+
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid request body",
+		})
+	}
 
 	userID := c.Locals("user_id")
 	if userID == nil {
-		log.Println("UserID is missing in context")
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "UserID is missing in context",
+			"status":  "error",
+			"message": "UserID is missing in context",
 		})
 	}
 
 	intUserID, ok := userID.(int)
 	if !ok || intUserID == 0 {
-		log.Printf("Invalid UserID from context: %v\n", userID)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Invalid UserID format",
+			"status":  "error",
+			"message": "Invalid UserID format",
 		})
 	}
 
-	if err := c.BodyParser(&transaction); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid transaction data",
-		})
-	}
-
-	transaction.UserID = intUserID
-
-	if transaction.Amount <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Amount must be greater than zero",
-		})
-	}
-	if transaction.Category == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Category cannot be empty",
-		})
-	}
-
-	newTransaction, err := module.CreateTransaction(transaction.UserID, transaction.Amount, transaction.Category, transaction.Description)
+	transaction, err := module.CreateTransaction(intUserID, body.Amount, body.Category, body.Description)
 	if err != nil {
-		log.Printf("Error creating transaction: %v\n", err)
+		if err.Error() == fmt.Sprintf("insufficient funds: available %.2f, required %.2f", 0.0, body.Amount) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":  "error",
+				"message": err.Error(),
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create transaction",
+			"status":  "error",
+			"message": "Failed to create transaction",
 		})
 	}
 
-	return c.JSON(fiber.Map{
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":      "success",
-		"transaction": newTransaction,
+		"transaction": transaction,
 	})
 }
 
@@ -131,8 +132,8 @@ func CreateIncomeHandler(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"status":  "success",
-		"income":  newIncome,
+		"status": "success",
+		"income": newIncome,
 	})
 }
 
@@ -181,7 +182,7 @@ func GetTransactionsHandler(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"status":      "success",
+		"status":       "success",
 		"transactions": transactions,
 	})
 }
