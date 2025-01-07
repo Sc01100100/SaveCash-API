@@ -50,9 +50,9 @@ func CreateTransactionHandler(c *fiber.Ctx) error {
 				"message": err.Error(),
 			})
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
-			"message": "Failed to create transaction",
+			"message": err.Error(),
 		})
 	}
 
