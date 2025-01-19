@@ -54,15 +54,6 @@ func CreateTransaction(userID int, amount float64, category, description string)
 	return transaction, nil
 }
 
-func DeleteTransaction(transactionID int) error {
-	query := `DELETE FROM transactions WHERE id = $1`
-	_, err := config.Database.Exec(query, transactionID)
-	if err != nil {
-		return fmt.Errorf("failed to delete transaction: %w", err)
-	}
-	return nil
-}
-
 func CreateIncome(userID int, amount float64, source string) (models.Income, error) {
 	var exists bool
 	err := config.Database.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)`, userID).Scan(&exists)
@@ -99,27 +90,6 @@ func CreateIncome(userID int, amount float64, source string) (models.Income, err
 	}
 
 	return income, nil
-}
-
-func DeleteIncome(incomeID int) error {
-	var amount float64
-	err := config.Database.QueryRow(`SELECT amount FROM incomes WHERE id = $1`, incomeID).Scan(&amount)
-	if err != nil {
-		return fmt.Errorf("failed to fetch income amount: %w", err)
-	}
-
-	query := `DELETE FROM incomes WHERE id = $1`
-	_, err = config.Database.Exec(query, incomeID)
-	if err != nil {
-		return fmt.Errorf("failed to delete income: %w", err)
-	}
-
-	_, err = config.Database.Exec(`UPDATE users SET balance = balance - $1 WHERE id = (SELECT user_id FROM incomes WHERE id = $2)`, amount, incomeID)
-	if err != nil {
-		return fmt.Errorf("failed to update user balance after deleting income: %w", err)
-	}
-
-	return nil
 }
 
 func GetTransactions(userID int) ([]models.Transaction, error) {
@@ -160,4 +130,66 @@ func GetIncomes(userID int) ([]models.Income, error) {
 	}
 
 	return incomes, nil
+}
+
+func DeleteTransaction(transactionID int) error {
+    var transaction models.Transaction
+    err := config.Database.QueryRow(`SELECT user_id, amount FROM transactions WHERE id = $1`, transactionID).Scan(&transaction.UserID, &transaction.Amount)
+    if err != nil {
+        return fmt.Errorf("failed to fetch transaction: %w", err)
+    }
+
+    _, err = config.Database.Exec(`DELETE FROM transactions WHERE id = $1`, transactionID)
+    if err != nil {
+        return fmt.Errorf("failed to delete transaction: %w", err)
+    }
+
+    _, err = config.Database.Exec(`UPDATE users SET balance = balance + $1 WHERE id = $2`, transaction.Amount, transaction.UserID)
+    if err != nil {
+        return fmt.Errorf("failed to update user balance: %w", err)
+    }
+
+    return nil
+}
+
+func UpdateTransaction(transactionID int, userID int, amount float64, category string, description string) (*models.Transaction, error) {
+    var existingTransaction models.Transaction
+    err := config.Database.QueryRow(`SELECT id, user_id, amount FROM transactions WHERE id = $1`, transactionID).Scan(&existingTransaction.ID, &existingTransaction.UserID, &existingTransaction.Amount)
+    if err != nil {
+        return nil, fmt.Errorf("transaction not found: %w", err)
+    }
+
+    if existingTransaction.UserID != userID {
+        return nil, fmt.Errorf("you are not authorized to update this transaction")
+    }
+
+    if amount <= 0 {
+        return nil, fmt.Errorf("amount must be greater than zero")
+    }
+
+    var userBalance float64
+    err = config.Database.QueryRow(`SELECT balance FROM users WHERE id = $1`, userID).Scan(&userBalance)
+    if err != nil {
+        return nil, fmt.Errorf("failed to fetch user balance: %w", err)
+    }
+
+    newBalance := userBalance - (amount - existingTransaction.Amount)
+    if newBalance < 0 {
+        return nil, fmt.Errorf("insufficient funds: available %.2f, required %.2f", userBalance, amount)
+    }
+
+    _, err = config.Database.Exec(`UPDATE transactions SET amount = $1, category = $2, description = $3 WHERE id = $4`, amount, category, description, transactionID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to update transaction: %w", err)
+    }
+
+    _, err = config.Database.Exec(`UPDATE users SET balance = $1 WHERE id = $2`, newBalance, userID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to update user balance: %w", err)
+    }
+
+    existingTransaction.Amount = amount
+    existingTransaction.Category = category
+    existingTransaction.Description = description
+    return &existingTransaction, nil
 }
